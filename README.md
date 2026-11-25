@@ -19,7 +19,7 @@ connections to several servers at once.
 | `crates/vc-proto` | Wire format only: messages, framing, voice datagram layout. |
 | `crates/vc-server` | Library plus `vc-server` binary: config, sans-IO `ServerState`, TLS, QUIC net layer. |
 | `crates/vc-client` | Library plus `vc-client` binary: DSP, sessions, profile, TOFU, net, audio, pipeline, GUI, auto-update. |
-| `crates/vc-release` | `vc-release` tool: release keys, build + sign + publish client updates. |
+| `crates/vc-release` | `vc-release` tool: release keys, build + sign + publish client updates (Windows and Linux). |
 | `crates/vc-mobile` | The iOS core: the client's headless app behind a C bridge that speaks JSON (`include/vc_mobile.h`). |
 | `ios/` | The iOS app (SwiftUI), `ios/VoiceChat.xcodeproj`. See [iOS client](#ios-client). |
 
@@ -28,6 +28,21 @@ connections to several servers at once.
 ```powershell
 cargo build --workspace --release
 ```
+
+### Linux
+
+The client also builds and runs on x86-64 Linux (X11 or Wayland). It needs these
+development packages (Ubuntu/Debian names):
+
+```bash
+sudo apt-get install -y libasound2-dev libxkbcommon-dev libwayland-dev libx11-dev libgl-dev pkg-config
+```
+
+```bash
+cargo build --release -p vc-client
+```
+
+See [Linux client](#linux-client) for what differs from Windows.
 
 ## Run the server
 
@@ -288,10 +303,41 @@ cargo run -p vc-client --example fake_peer -- --addr 127.0.0.1:7878 --nick bob -
 - Chat shows the newest 200 lines of a channel.
 - Passwords are stored in `servers.toml` in the app's sandbox, as on the desktop.
 
+## Linux client
+
+Released together with the Windows client, as one x86-64 binary,
+`vc-client-<version>-x86_64-linux`, from the same download page. It needs glibc 2.39 or
+newer (it is built on Ubuntu 24.04), ALSA (`libasound2`), xkbcommon, OpenGL (Mesa) and,
+for updates, `curl`.
+
+### Install
+
+```bash
+mkdir -p ~/.local/opt/voicechat
+mv ~/Downloads/vc-client-<version>-x86_64-linux ~/.local/opt/voicechat/vc-client
+chmod +x ~/.local/opt/voicechat/vc-client
+~/.local/opt/voicechat/vc-client
+```
+
+Rename the file to `vc-client`. The updater keeps its swap files next to it
+(`vc-client.old`, `vc-client.<pid>.new`) and its state in `~/.local/share/vc-client/update/`.
+The profile is in `~/.config/vc-client/`.
+
+### Differences on Linux
+
+- No screen-share sending yet: the Share screen button is disabled, Ctrl+Shift+S does
+  nothing and the shortcut is not listed. Watching other people's shares works.
+- No stream sound and no H.264. Watching uses JPEG only. The server falls back to JPEG for
+  a sharer whenever any watcher cannot decode H.264, so **one Linux watcher switches that
+  share to JPEG for everyone watching it** (the same as an iOS watcher).
+- Updates are fetched with the system `curl` (`curl` must be installed; without it the
+  check fails and is retried). It uses the system CA store and curl's proxy environment
+  variables (`https_proxy`, `no_proxy`, ...); `~/.curlrc` is ignored.
+
 ## Auto-updates
 
-Release builds of the Windows client update themselves from `https://voicechat.owl.gay`,
-silently. A few seconds after start, and every minute after that, the client checks for a
+Release builds of the Windows and Linux clients update themselves from
+`https://voicechat.owl.gay`, silently. A few seconds after start, and every minute after that, the client checks for a
 new version. When it finds one it downloads it in the background, checks it, and puts it
 in place. The running client is never restarted: the next launch is the new version. The
 current state is shown under Settings → Profile → About.
@@ -301,8 +347,10 @@ current state is shown under Settings → Profile → About.
 The update host is **not** trusted. A hijacked host, DNS record or TLS certificate can at
 worst hold updates back; it cannot make a client run its code.
 
-- Each release is described by `latest.signed`: a manifest (version, exact size, SHA-256,
-  issue and expiry time) signed with an **offline Ed25519 release key**. The public keys
+- Each release is described by `latest.signed`: a manifest (target, version, exact size,
+  SHA-256, issue and expiry time) signed with an **offline Ed25519 release key**. Each
+  target has its own: Windows at `/<channel>/latest.signed`, Linux at
+  `/<channel>/linux/latest.signed`. A client only accepts a manifest for its own target. The public keys
   are compiled into the exe from `crates/vc-client/update-keys.txt`.
 - The client checks the signature before it reads the manifest, then the exe's size and
   SHA-256. It then runs the new exe once with `--update-selftest`, and only after all of that
@@ -310,9 +358,10 @@ worst hold updates back; it cannot make a client run its code.
 - Downgrades and replays are refused: the version must be higher than the installed one,
   and a manifest older than the newest one already seen is ignored. Manifests expire after
   180 days, so a frozen host cannot hide new releases for ever.
-- The host name is fixed in the code. Redirects are refused, HTTPS (TLS 1.2+) uses the Windows
-  certificate store and proxy settings, and every download is capped at the size the
-  manifest names.
+- The host name is fixed in the code. Redirects are refused, only status 200 is accepted,
+  and every download is capped at the size the manifest names. HTTPS (TLS 1.2+) uses the
+  Windows certificate store and proxy settings on Windows, and `curl` with the system CA
+  store on Linux.
 - A new version that does not stay up for 30 seconds in three launches in a row is rolled
   back to the previous exe and never fetched again.
 
@@ -336,7 +385,26 @@ worst hold updates back; it cannot make a client run its code.
    primary key is lost or leaked, publish with the backup, and ship a release whose
    `update-keys.txt` drops the bad key.
 
+### Linux build setup (once, on the release PC)
+
+`publish` builds the Linux client in WSL on the same Windows PC, so the release key never
+leaves it. Set up the WSL distribution once (default `Ubuntu`, 24.04; another one can be
+picked with the `VC_WSL_DISTRO` environment variable):
+
+```powershell
+wsl -d Ubuntu -e bash -c 'sudo apt-get update && sudo apt-get install -y build-essential curl libasound2-dev libxkbcommon-dev libwayland-dev libx11-dev libgl-dev pkg-config'
+```
+
+```powershell
+wsl -d Ubuntu -e bash -c 'curl --proto =https --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain 1.95 -c clippy,rustfmt'
+```
+
+The distro's glibc sets the oldest Linux the binary runs on (2.39 for Ubuntu 24.04). The
+download page and this README say so; change both if you build on another distro.
+
 ### Publishing a release
+
+Every release publishes Windows and Linux together, from one command.
 
 1. Bump `version` in `[workspace.package]` in the top-level `Cargo.toml`.
 2. Build, self-test, sign and lay out the upload folder:
@@ -347,13 +415,29 @@ worst hold updates back; it cannot make a client run its code.
 
    This builds `vc-client` with `VC_UPDATE_CHANNEL=stable` into its own folder,
    `target/channel-stable/` (`target/channel-<channel>/` in general), so your everyday
-   `target/release` exe is untouched. A plain `cargo build` has no channel, and its exe
-   never updates itself. The tool refuses to publish a version that is not higher than
-   the one already in `dist`. `dist/index.html`, the public download page, always
-   describes the stable release: only a `stable` publish writes it.
-3. Upload `dist/` to the host: first the exe (`stable/vc-client-<version>-x86_64.exe`) and
-   `index.html`, and **`stable/latest.signed` last**.
-4. Check the live files: `cargo run -p vc-release -- verify`.
+   `target/release` exe is untouched. It then builds the Linux client in WSL (into
+   `~/.cache/vc-release/channel-<channel>/` inside WSL, copied to
+   `target/channel-<channel>-linux/vc-client`) and self-tests it there. Both builds use
+   `--locked`. A plain `cargo build` has no channel, and its binary never updates itself.
+
+   The tool checks both targets before it builds: it refuses a version that is not higher
+   than the Windows or the Linux one already in `dist`. Nothing is written unless both
+   binaries built and passed their self-test. The manifests are written last, Linux first
+   and Windows last. `dist/index.html`, the public download page, always describes the
+   stable release: only a `stable` publish writes it.
+
+   `--windows-only` publishes Windows without Linux, with a loud warning. Use it only in an
+   emergency (WSL broken and a Windows fix cannot wait) or to recover from a publish that
+   failed part way; Linux clients then stay on their version until the next full publish,
+   and the page keeps showing the Linux release already in `dist`.
+3. Upload `dist/` to the host in the order the tool prints:
+   1. `stable/vc-client-<version>-x86_64.exe`
+   2. `stable/linux/vc-client-<version>-x86_64-linux`
+   3. `index.html`
+   4. `stable/linux/latest.signed`
+   5. **`stable/latest.signed` last**
+4. Check the live files: `cargo run -p vc-release -- verify`. It checks the manifest and
+   binary of every target; for `stable` and `test` a missing Linux release is an error.
 
 #### Test the update itself before every stable release
 
@@ -385,10 +469,17 @@ new one:
    and `test`. Then start it.
 3. Within about a minute `vc-client.old.exe` should appear next to it, and Settings → Profile
    should say the update is ready. Close it and start it again: it must be the new version.
-4. Only then publish to `stable`.
+4. Do the same for Linux with the previous Linux test-channel build
+   (`dist/test/linux/vc-client-<previous>-x86_64-linux`), copied to a writable folder as
+   `vc-client` with `chmod +x`: `./vc-client --update-selftest x` must print the previous
+   version and `test`; after a minute `vc-client.old` appears beside it, and the next start
+   is the new version. This test starts with the second Linux release: the first Linux
+   release has no previous Linux version to update from.
+5. Only then publish to `stable`.
 
 Re-sign before 180 days pass, even with no new release (`verify` warns when fewer than 30
-days are left). Then upload the new `latest.signed`:
+days are left). `resign` re-signs every target published in the channel. Then upload the
+new `linux/latest.signed` and `latest.signed` (Windows last):
 
 ```powershell
 cargo run -p vc-release -- resign --key E:\voicechat-release-primary.pkcs8 --out dist
@@ -397,9 +488,13 @@ cargo run -p vc-release -- resign --key E:\voicechat-release-primary.pkcs8 --out
 ### Hosting rules
 
 - Static files only, over HTTPS, with no redirects (the client does not follow them).
-- Serve `latest.signed` with `Cache-Control: no-cache`, and the versioned exes with
-  `Cache-Control: public, max-age=31536000, immutable`.
-- Never overwrite a published exe. Every release gets a new file name.
+- Serve every `latest.signed` (including `<channel>/linux/latest.signed`) with
+  `Cache-Control: no-cache`, and the versioned binaries (`vc-client-<version>-x86_64.exe`
+  and the extension-less `vc-client-<version>-x86_64-linux`) with
+  `Cache-Control: public, max-age=31536000, immutable`. Match by file name, not by
+  extension.
+- Never overwrite a published binary. Every release gets a new file name (the tool refuses
+  to replace one in `dist` with different contents).
 
 ### Installing and opting out
 
@@ -412,7 +507,8 @@ cargo run -p vc-release -- resign --key E:\voicechat-release-primary.pkcs8 --out
   download. Updates that the client installs itself are not affected.
 - Opt out with `vc-client --no-update`, or by setting the `VC_NO_UPDATE` environment variable.
 - Manual recovery: while `vc-client.old.exe` is next to the exe, close the client, delete
-  `vc-client.exe`, and rename `vc-client.old.exe` to `vc-client.exe`.
+  `vc-client.exe`, and rename `vc-client.old.exe` to `vc-client.exe`. On Linux the same
+  with `vc-client.old` and `vc-client`.
 
 ## Tests
 

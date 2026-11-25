@@ -85,7 +85,7 @@ fn main() -> eframe::Result<()> {
         tracing::info!("{l}");
     }
     if let Some(paths) = &update_paths {
-        #[cfg(windows)]
+        #[cfg(any(windows, target_os = "linux"))]
         update::apply::spawn_background(paths.clone());
         // Healthy after 30 s of uptime: clear the rollback counter. Checks are skipped
         // until then on the first launch after an update, so check again right away.
@@ -94,8 +94,7 @@ fn main() -> eframe::Result<()> {
             .name("vc-update-health".into())
             .spawn(move || {
                 std::thread::sleep(std::time::Duration::from_secs(30));
-                if update::apply::confirm_healthy(&p, update::RUNNING, update::apply::LOCK_WAIT)
-                {
+                if update::apply::confirm_healthy(&p, update::RUNNING, update::apply::LOCK_WAIT) {
                     update::request_check_now();
                 }
             });

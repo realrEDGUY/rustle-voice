@@ -1648,6 +1648,58 @@ fn gui_sharing(servers: &[(&str, std::net::SocketAddr, &str, Option<&str>)]) -> 
     gui_opts(FakeMode::Silent, servers, true)
 }
 
+/// Start sharing on `server`: the Share screen button where this platform can capture,
+/// else the voice card's command directly (Linux has no capture backend, so the button
+/// is disabled there, but the fake screen still exercises the watching side).
+fn start_share(h: &mut H, server: &str) {
+    if vc_client::capture::SUPPORTED {
+        click_button(h, "Share screen");
+    } else {
+        let key = key_of(h, server);
+        h.state_mut()
+            .dispatch(vec![vc_client::app::UiCommand::ShareScreenOn(key)]);
+        h.step();
+    }
+}
+
+/// Stop the running share: the Stop sharing button where it is enabled, else the
+/// voice card's command (which stops a running share).
+fn stop_share(h: &mut H, server: &str) {
+    if vc_client::capture::SUPPORTED {
+        click_button(h, "Stop sharing");
+    } else {
+        let key = key_of(h, server);
+        h.state_mut()
+            .dispatch(vec![vc_client::app::UiCommand::ShareScreenOn(key)]);
+        h.step();
+    }
+}
+
+#[cfg(not(windows))]
+#[test]
+fn share_button_disabled_without_capture() {
+    const { assert!(!vc_client::capture::SUPPORTED) };
+    let srv = TestServer::start(|_| {});
+    let mut a = gui_sharing(&[("S", srv.addr(), "alice", None)]);
+    connect(&mut a.h, "S");
+    wait_label(&mut a.h, "Share screen");
+    let b = a.h.get_by_role_and_label(Role::Button, "Share screen");
+    assert!(
+        b.accesskit_node().is_disabled(),
+        "Share screen must be disabled without capture"
+    );
+    b.click();
+    a.h.step();
+    a.h.step();
+    assert_eq!(a.h.state().capturing(), None);
+    assert!(!has(&a.h, "You are sharing your screen"));
+    // The hotkey does nothing either.
+    a.h.key_press_modifiers(Modifiers::COMMAND | Modifiers::SHIFT, Key::S);
+    a.h.step();
+    a.h.step();
+    assert_eq!(a.h.state().capturing(), None);
+}
+
 /// Opt in to `nick`'s share from their user menu and wait for its tile on the stage.
 fn watch(h: &mut H, nick: &str) {
     let row = format!("{nick} [sharing]");
@@ -1663,7 +1715,7 @@ fn screenshare_fake_visible_to_peer() {
     let mut b = gui_with(FakeMode::Silent, &[("S", srv.addr(), "bob", None)]);
     connect(&mut a.h, "S");
     connect(&mut b.h, "S");
-    click_button(&mut a.h, "Share screen");
+    start_share(&mut a.h, "S");
     wait_label(&mut a.h, "You are sharing your screen");
     assert!(has(&a.h, "Stop sharing"));
     wait_contains(&mut b.h, "alice [sharing]");
@@ -1702,7 +1754,7 @@ fn screenshare_fake_visible_to_peer() {
             .map(|v| v.generation)
             > Some(first)
     });
-    click_button(&mut a.h, "Stop sharing");
+    stop_share(&mut a.h, "S");
     step_until(&mut b.h, "share gone", T, |h| {
         !has(h, "Screen: alice") && !has_contains(h, "[sharing]")
     });
@@ -1724,7 +1776,7 @@ fn share_indicator_visible_on_other_server() {
     connect(&mut a.h, "Two");
     connect(&mut b.h, "One");
     assert_eq!(a.h.state().model.selected, Some(key_of(&a.h, "One")));
-    click_button(&mut a.h, "Share screen");
+    start_share(&mut a.h, "One");
     wait_label(&mut a.h, "You are sharing your screen");
     watch(&mut b.h, "alice");
     click(&mut a.h, "Two");
@@ -1735,7 +1787,7 @@ fn share_indicator_visible_on_other_server() {
     wait_label(&mut a.h, "You are sharing your screen");
     assert!(has(&a.h, "Stop sharing"), "{:?}", labels(&a.h));
     assert_eq!(a.h.state().capturing(), Some(key_of(&a.h, "One")));
-    click_button(&mut a.h, "Stop sharing");
+    stop_share(&mut a.h, "One");
     step_until(&mut b.h, "share gone on One", T, |h| {
         !has(h, "Screen: alice") && !has_contains(h, "[sharing]")
     });
@@ -1753,7 +1805,7 @@ fn screenshare_stops_on_move() {
     let mut b = gui_with(FakeMode::Silent, &[("S", srv.addr(), "bob", None)]);
     connect(&mut a.h, "S");
     connect(&mut b.h, "S");
-    click_button(&mut a.h, "Share screen");
+    start_share(&mut a.h, "S");
     watch(&mut b.h, "alice");
     assert_eq!(a.h.state().capturing(), Some(key_of(&a.h, "S")));
     click_button(&mut a.h, "Join AFK");
@@ -1773,7 +1825,7 @@ fn screenshare_not_shown_until_watched() {
     let mut b = gui_with(FakeMode::Silent, &[("S", srv.addr(), "bob", None)]);
     connect(&mut a.h, "S");
     connect(&mut b.h, "S");
-    click_button(&mut a.h, "Share screen");
+    start_share(&mut a.h, "S");
     wait_label(&mut a.h, "0 watching");
     wait_label(&mut b.h, "alice [sharing]");
     let key = key_of(&b.h, "S");
@@ -1823,8 +1875,8 @@ fn streams_grid_two_sharers() {
     connect(&mut a.h, "S");
     connect(&mut c.h, "S");
     connect(&mut b.h, "S");
-    click_button(&mut a.h, "Share screen");
-    click_button(&mut c.h, "Share screen");
+    start_share(&mut a.h, "S");
+    start_share(&mut c.h, "S");
     wait_label(&mut b.h, "alice [sharing]");
     wait_label(&mut b.h, "carol [sharing]");
     let key = key_of(&b.h, "S");
@@ -1969,7 +2021,7 @@ fn stream_sound_toggle_persists_and_viewer_can_mute() {
     let mut b = gui_with(FakeMode::Silent, &[("S", srv.addr(), "bob", None)]);
     connect(&mut a.h, "S");
     connect(&mut b.h, "S");
-    click_button(&mut a.h, "Share screen");
+    start_share(&mut a.h, "S");
     wait_label(&mut a.h, "You are sharing your screen");
     open_settings_tab(&mut a.h, "Screen share");
     a.h.get_by_role_and_label(Role::CheckBox, vc_client::gui::SHARE_SOUND)
@@ -2086,7 +2138,7 @@ fn alice_shares_to_bob(srv: &TestServer) -> (Gui, Gui, ServerKey) {
     let mut b = gui_with(FakeMode::Silent, &[("S", srv.addr(), "bob", None)]);
     connect(&mut a.h, "S");
     connect(&mut b.h, "S");
-    click_button(&mut a.h, "Share screen");
+    start_share(&mut a.h, "S");
     wait_label(&mut b.h, "alice [sharing]");
     let key = key_of(&b.h, "S");
     (a, b, key)
@@ -2178,7 +2230,7 @@ fn live_badge_in_another_channel_is_not_clickable() {
     wait_label(&mut a.h, "Join AFK");
     click(&mut a.h, "Join AFK");
     step_until(&mut a.h, "alice in AFK", T, |h| !has(h, "Join AFK"));
-    click_button(&mut a.h, "Share screen");
+    start_share(&mut a.h, "S");
     wait_label(&mut b.h, "alice [sharing]");
     for _ in 0..3 {
         b.h.step();

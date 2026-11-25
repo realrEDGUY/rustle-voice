@@ -65,15 +65,27 @@ fn voice_card(ui: &mut egui::Ui, model: &AppModel, cmds: &mut Vec<UiCommand>) {
                 } else {
                     ("Share screen", Some(theme::HOVER))
                 };
-                let b = icons::icon_button(
+                let tip = if crate::capture::SUPPORTED {
+                    "Share screen (Ctrl+Shift+S)"
+                } else {
+                    NO_SCREEN_SHARE
+                };
+                let b = icons::icon_button_enabled(
                     ui,
+                    crate::capture::SUPPORTED,
                     icons::SCREEN_SHARE,
                     15.0,
                     theme::TEXT,
                     bg,
                     label,
-                    "Share screen (Ctrl+Shift+S)",
+                    tip,
                 );
+                // egui shows only the disabled hover text on a disabled widget.
+                let b = if crate::capture::SUPPORTED {
+                    b
+                } else {
+                    b.on_disabled_hover_text(NO_SCREEN_SHARE)
+                };
                 if b.clicked() {
                     cmds.push(UiCommand::ShareScreenOn(k));
                 }
@@ -95,6 +107,9 @@ fn voice_card(ui: &mut egui::Ui, model: &AppModel, cmds: &mut Vec<UiCommand>) {
             }
         });
 }
+
+/// Tooltip of the disabled Share screen button where there is no capture backend.
+pub const NO_SCREEN_SHARE: &str = "Screen sharing is not available on Linux yet";
 
 fn me_bar(ui: &mut egui::Ui, model: &AppModel, cmds: &mut Vec<UiCommand>) {
     egui::Frame::new()

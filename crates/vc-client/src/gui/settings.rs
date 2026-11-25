@@ -66,13 +66,16 @@ pub fn ptt_keys() -> Vec<&'static str> {
 
 /// The shortcut list shown on the Shortcuts tab: `(action, keys)`.
 pub fn shortcut_rows(ptt_key: &str) -> Vec<(&'static str, String)> {
-    vec![
+    let mut rows = vec![
         ("Push-to-talk", ptt_key.to_string()),
         ("Mute microphone", "Ctrl+M".into()),
         ("Deafen", "Ctrl+D".into()),
-        ("Share screen", "Ctrl+Shift+S".into()),
-        ("Rename channel", "F2".into()),
-    ]
+    ];
+    if crate::capture::SUPPORTED {
+        rows.push(("Share screen", "Ctrl+Shift+S".into()));
+    }
+    rows.push(("Rename channel", "F2".into()));
+    rows
 }
 
 fn device_combo(
@@ -659,6 +662,9 @@ mod tests {
     fn shortcut_rows_show_ptt_key() {
         let rows = shortcut_rows("V");
         assert_eq!(rows[0], ("Push-to-talk", "V".to_string()));
-        assert!(rows.iter().any(|(_, k)| k == "Ctrl+Shift+S"));
+        assert_eq!(
+            rows.iter().any(|(_, k)| k == "Ctrl+Shift+S"),
+            crate::capture::SUPPORTED
+        );
     }
 }

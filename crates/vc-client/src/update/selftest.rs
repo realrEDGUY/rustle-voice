@@ -58,12 +58,23 @@ pub fn run_with_timeout(
     channel: &str,
     timeout: Duration,
 ) -> SelfTest {
+    run_command(Command::new(exe), expect_version, channel, timeout)
+}
+
+/// [`run_with_timeout`] for a prepared command, such as the release tool's
+/// `wsl -d <distro> -e timeout 30 <linux binary>`. The flag and the nonce are appended
+/// here, so the command must end with the binary to test.
+pub fn run_command(
+    mut cmd: Command,
+    expect_version: &str,
+    channel: &str,
+    timeout: Duration,
+) -> SelfTest {
     let mut nonce = [0u8; 8];
     if ring::rand::SecureRandom::fill(&ring::rand::SystemRandom::new(), &mut nonce).is_err() {
         return SelfTest::Transient("no randomness".into());
     }
     let nonce = super::to_hex(&nonce);
-    let mut cmd = Command::new(exe);
     cmd.arg(FLAG)
         .arg(&nonce)
         .stdin(Stdio::null())

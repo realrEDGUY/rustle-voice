@@ -14,7 +14,71 @@ pub const DOMAIN: &[u8] = b"vc-update-v1\n";
 /// Largest `latest.signed` accepted.
 pub const MAX_FILE: usize = 64 * 1024;
 pub const PRODUCT: &str = "vc-client";
-pub const TARGET: &str = "x86_64-pc-windows-msvc";
+/// Target triple this build was compiled for (set by `build.rs`). The client only
+/// accepts manifests for exactly this triple.
+pub const TARGET: &str = env!("VC_TARGET");
+
+/// One published build target: its triple and where its files live on the host.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Target {
+    pub triple: &'static str,
+    /// Sub-folder under `/{channel}/`; empty means the channel folder itself.
+    pub dir: &'static str,
+    /// Appended to `vc-client-{version}` to name the binary.
+    pub file_suffix: &'static str,
+}
+
+/// Windows x64. Its layout (`/{channel}/latest.signed`,
+/// `/{channel}/vc-client-{v}-x86_64.exe`) is what every shipped Windows client reads:
+/// never change it.
+pub const WINDOWS: Target = Target {
+    triple: "x86_64-pc-windows-msvc",
+    dir: "",
+    file_suffix: "-x86_64.exe",
+};
+
+/// Linux x64 (glibc): `/{channel}/linux/latest.signed`,
+/// `/{channel}/linux/vc-client-{v}-x86_64-linux`.
+pub const LINUX: Target = Target {
+    triple: "x86_64-unknown-linux-gnu",
+    dir: "linux",
+    file_suffix: "-x86_64-linux",
+};
+
+/// Every target a release publishes.
+pub const TARGETS: [&Target; 2] = [&WINDOWS, &LINUX];
+
+/// The published target for `triple`, if any.
+pub fn for_triple(triple: &str) -> Option<&'static Target> {
+    TARGETS.into_iter().find(|t| t.triple == triple)
+}
+
+/// The published target this build is, or `None` for a triple no release ships (the
+/// updater stays off there).
+pub fn this_target() -> Option<&'static Target> {
+    for_triple(TARGET)
+}
+
+impl Target {
+    /// Name of the binary for `version`.
+    pub fn file_name(&self, version: &str) -> String {
+        format!("vc-client-{version}{}", self.file_suffix)
+    }
+
+    /// URL path of `file` for this target in `channel`.
+    pub fn url_path(&self, channel: &str, file: &str) -> String {
+        if self.dir.is_empty() {
+            format!("/{channel}/{file}")
+        } else {
+            format!("/{channel}/{}/{file}", self.dir)
+        }
+    }
+
+    /// URL path of this target's `latest.signed` in `channel`.
+    pub fn manifest_path(&self, channel: &str) -> String {
+        self.url_path(channel, "latest.signed")
+    }
+}
 
 /// Unknown fields are allowed (forward compatibility); the signature covers every byte.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -67,9 +131,21 @@ impl std::fmt::Display for Reject {
 
 impl std::error::Error for Reject {}
 
-/// Check `file` (the bytes of `latest.signed`) and return the manifest it carries.
-/// The signature is checked before any JSON is parsed.
+/// Check `file` (the bytes of `latest.signed`) and return the manifest it carries,
+/// for this build's own [`TARGET`]. The signature is checked before any JSON is parsed.
 pub fn verify(file: &[u8], keys: &[[u8; 32]], now: u64, channel: &str) -> Result<Manifest, Reject> {
+    verify_for(TARGET, file, keys, now, channel)
+}
+
+/// [`verify`] for a manifest that must name `triple` (the release tool checks every
+/// target's manifest, not only the host's).
+pub fn verify_for(
+    triple: &str,
+    file: &[u8],
+    keys: &[[u8; 32]],
+    now: u64,
+    channel: &str,
+) -> Result<Manifest, Reject> {
     if file.len() > MAX_FILE {
         return Err(Reject::TooLarge);
     }
@@ -100,7 +176,7 @@ pub fn verify(file: &[u8], keys: &[[u8; 32]], now: u64, channel: &str) -> Result
     if m.product != PRODUCT {
         return Err(Reject::Product);
     }
-    if m.target != TARGET {
+    if m.target != triple {
         return Err(Reject::Target);
     }
     if m.channel != channel {
@@ -155,14 +231,16 @@ pub fn decide(m: &Manifest, running: &str, state: &State) -> Decision {
     Decision::Install
 }
 
-/// Name of the exe for `version` on the host, under `/{channel}/`.
-pub fn file_name(version: &str) -> String {
-    format!("vc-client-{version}-x86_64.exe")
+/// Name of this build's binary for `version` on the host (client side only; the
+/// release tool uses [`Target::file_name`]). `None` on a target no release ships.
+pub fn file_name(version: &str) -> Option<String> {
+    this_target().map(|t| t.file_name(version))
 }
 
-/// URL path of a file in `channel`.
-pub fn url_path(channel: &str, file: &str) -> String {
-    format!("/{channel}/{file}")
+/// URL path of a file in `channel` for this build's target (client side only; the
+/// release tool uses [`Target::url_path`]). `None` on a target no release ships.
+pub fn url_path(channel: &str, file: &str) -> Option<String> {
+    this_target().map(|t| t.url_path(channel, file))
 }
 
 /// Build `latest.signed` bytes for `manifest_json` (release tool and tests only).
@@ -362,7 +440,69 @@ pub(crate) mod tests {
             Decision::Skip("version blacklisted")
         );
         assert_eq!(decide(&manifest("0.2.1"), "0.1.0", &st3), Decision::Install);
-        assert_eq!(file_name("0.2.0"), "vc-client-0.2.0-x86_64.exe");
-        assert_eq!(url_path("stable", "latest.signed"), "/stable/latest.signed");
+    }
+
+    /// Shipped Windows clients read exactly these names: they must never change.
+    #[cfg(all(windows, target_arch = "x86_64"))]
+    #[test]
+    fn windows_build_is_the_windows_target() {
+        assert_eq!(TARGET, "x86_64-pc-windows-msvc");
+        assert_eq!(this_target(), Some(&WINDOWS));
+        assert_eq!(file_name("0.2.0").unwrap(), "vc-client-0.2.0-x86_64.exe");
+        assert_eq!(
+            url_path("stable", "latest.signed").unwrap(),
+            "/stable/latest.signed"
+        );
+    }
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64", target_env = "gnu"))]
+    #[test]
+    fn linux_build_is_the_linux_target() {
+        assert_eq!(TARGET, "x86_64-unknown-linux-gnu");
+        assert_eq!(this_target(), Some(&LINUX));
+    }
+
+    #[test]
+    fn target_layout() {
+        assert_eq!(WINDOWS.triple, "x86_64-pc-windows-msvc");
+        assert_eq!(WINDOWS.file_name("0.2.0"), "vc-client-0.2.0-x86_64.exe");
+        assert_eq!(WINDOWS.manifest_path("stable"), "/stable/latest.signed");
+        assert_eq!(
+            WINDOWS.url_path("stable", "vc-client-0.2.0-x86_64.exe"),
+            "/stable/vc-client-0.2.0-x86_64.exe"
+        );
+        assert_eq!(LINUX.triple, "x86_64-unknown-linux-gnu");
+        assert_eq!(LINUX.file_name("0.2.0"), "vc-client-0.2.0-x86_64-linux");
+        assert_eq!(LINUX.manifest_path("stable"), "/stable/linux/latest.signed");
+        assert_eq!(
+            LINUX.url_path("test", "vc-client-0.2.0-x86_64-linux"),
+            "/test/linux/vc-client-0.2.0-x86_64-linux"
+        );
+        assert_eq!(for_triple("x86_64-pc-windows-msvc"), Some(&WINDOWS));
+        assert_eq!(for_triple("x86_64-unknown-linux-gnu"), Some(&LINUX));
+        assert_eq!(for_triple("aarch64-apple-ios"), None);
+    }
+
+    #[test]
+    fn manifest_for_one_target_is_refused_by_the_other() {
+        let (k, p) = test_key();
+        let mut win = manifest("0.2.0");
+        win.target = WINDOWS.triple.into();
+        let mut lin = manifest("0.2.0");
+        lin.target = LINUX.triple.into();
+        let (fw, fl) = (signed(&k, &win), signed(&k, &lin));
+        assert_eq!(
+            verify_for(WINDOWS.triple, &fw, &[p], 1500, "stable"),
+            Ok(win)
+        );
+        assert_eq!(verify_for(LINUX.triple, &fl, &[p], 1500, "stable"), Ok(lin));
+        assert_eq!(
+            verify_for(WINDOWS.triple, &fl, &[p], 1500, "stable"),
+            Err(Reject::Target)
+        );
+        assert_eq!(
+            verify_for(LINUX.triple, &fw, &[p], 1500, "stable"),
+            Err(Reject::Target)
+        );
     }
 }

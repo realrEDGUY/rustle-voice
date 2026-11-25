@@ -1,4 +1,4 @@
-//! Silent, signed auto-updates for the Windows client.
+//! Silent, signed auto-updates for the Windows and Linux clients.
 //!
 //! Trust model: the update host (`voicechat.owl.gay`) is not trusted. Every update is
 //! described by `latest.signed`, a manifest signed with an offline Ed25519 key whose
@@ -8,7 +8,7 @@
 //!
 //! Flow: a background thread checks a while after start, downloads and verifies the
 //! new exe beside the running one, runs it once with `--update-selftest`, then swaps
-//! the files (`exe` → `<stem>.old.exe`, new → `exe`). The running process carries on
+//! the files (`exe` → `<stem>.old.exe`, or `<name>.old` on Linux; new → `exe`). The running process carries on
 //! untouched and the next launch is the new version. A new version that never reaches
 //! a healthy state within three launches is rolled back and blacklisted.
 //!
@@ -16,12 +16,15 @@
 //! `update-keys.txt` lists at least one key.
 
 pub mod apply;
+#[cfg(target_os = "linux")]
+pub mod curl;
 #[cfg(windows)]
 pub mod http;
 pub mod manifest;
 pub mod selftest;
 pub mod state;
 
+use std::env::consts::EXE_SUFFIX;
 use std::path::{Path, PathBuf};
 use std::sync::{Condvar, Mutex, OnceLock};
 
@@ -34,7 +37,8 @@ pub const CHANNEL: Option<&str> = option_env!("VC_UPDATE_CHANNEL");
 /// Version of the running exe.
 pub const RUNNING: &str = env!("CARGO_PKG_VERSION");
 
-/// Host that serves `/{channel}/latest.signed` and `/{channel}/vc-client-*.exe`.
+/// Host that serves `/{channel}/latest.signed` and `/{channel}/vc-client-*.exe` (and
+/// the Linux builds under `/{channel}/linux/`).
 pub const HOST: &str = "voicechat.owl.gay";
 
 const SHIPPED_KEYS: &str = include_str!("../../update-keys.txt");
@@ -66,7 +70,7 @@ pub fn keys() -> Vec<[u8; 32]> {
 /// Whether the updater may run in this process, or why not.
 pub fn enabled(cli_no_update: bool) -> Result<(), &'static str> {
     enabled_with(
-        cfg!(windows),
+        cfg!(any(windows, target_os = "linux")) && manifest::this_target().is_some(),
         CHANNEL,
         keys().len(),
         cli_no_update,
@@ -75,13 +79,13 @@ pub fn enabled(cli_no_update: bool) -> Result<(), &'static str> {
 }
 
 fn enabled_with(
-    windows: bool,
+    supported: bool,
     channel: Option<&str>,
     keys: usize,
     cli_no_update: bool,
     env_no_update: bool,
 ) -> Result<(), &'static str> {
-    if !windows {
+    if !supported {
         return Err("not supported on this platform");
     }
     if channel.is_none() {
@@ -119,7 +123,8 @@ pub struct Paths {
     pub legacy_lock: PathBuf,
 }
 
-/// `%LOCALAPPDATA%\vc-client\update`.
+/// `%LOCALAPPDATA%\vc-client\update` (Windows), `~/.local/share/vc-client/update`
+/// (Linux).
 pub fn default_state_dir() -> Option<PathBuf> {
     Some(dirs::data_local_dir()?.join("vc-client").join("update"))
 }
@@ -135,14 +140,23 @@ impl Paths {
     /// state.
     pub fn new(exe: &Path, state_dir: &Path) -> Option<Paths> {
         let dir = exe.parent()?.to_path_buf();
-        let stem = exe.file_stem()?.to_str()?.to_string();
+        // Windows: `vc-client.exe` → stem `vc-client`. Where binaries have no extension
+        // (Linux) the whole name is the stem, so a dotted name such as
+        // `vc-client-0.1.7-x86_64-linux` keeps its own swap files.
+        let stem = if EXE_SUFFIX.is_empty() {
+            exe.file_name()?
+        } else {
+            exe.file_stem()?
+        }
+        .to_str()?
+        .to_string();
         let f = |suffix: &str| dir.join(format!("{stem}{suffix}"));
         let key = install_key(exe);
         let s = |suffix: &str| state_dir.join(format!("{stem}-{key}{suffix}"));
         Some(Paths {
             exe: exe.to_path_buf(),
-            old: f(".old.exe"),
-            bad: f(".bad.exe"),
+            old: f(&format!(".old{EXE_SUFFIX}")),
+            bad: f(&format!(".bad{EXE_SUFFIX}")),
             state_dir: state_dir.to_path_buf(),
             state: s(".update.json"),
             lock: s(".update.lock"),
@@ -160,14 +174,17 @@ impl Paths {
 
     /// Per-process verified exe awaiting its self-test and the swap.
     pub fn new_exe(&self, pid: u32) -> PathBuf {
-        self.dir.join(format!("{}.{pid}.new.exe", self.stem))
+        self.dir
+            .join(format!("{}.{pid}.new{EXE_SUFFIX}", self.stem))
     }
 }
 
-/// First 8 hex of SHA-256 over the exe path, lowercased (Windows paths are
-/// case-insensitive).
+/// First 8 hex of SHA-256 over the exe path. Lowercased on Windows, whose paths are
+/// case-insensitive; Linux paths are case-sensitive and used as they are.
 fn install_key(exe: &Path) -> String {
-    let p = exe.to_string_lossy().to_lowercase();
+    let p = exe.to_string_lossy();
+    #[cfg(windows)]
+    let p = p.to_lowercase();
     to_hex(&ring::digest::digest(&ring::digest::SHA256, p.as_bytes()).as_ref()[..4])
 }
 
@@ -296,8 +313,14 @@ pub fn pid_alive(pid: u32) -> bool {
     }
 }
 
+/// Linux: a pid is alive while `/proc/<pid>` exists.
+#[cfg(target_os = "linux")]
+pub fn pid_alive(pid: u32) -> bool {
+    Path::new("/proc").join(pid.to_string()).exists()
+}
+
 /// Never delete another process's files where liveness cannot be checked.
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "linux")))]
 pub fn pid_alive(_pid: u32) -> bool {
     true
 }
@@ -386,6 +409,7 @@ mod tests {
         assert!(parse_version("0.1.10") > parse_version("0.1.9"));
     }
 
+    #[cfg(windows)]
     #[test]
     fn paths_derive_from_exe_name() {
         let state = Path::new(r"C:\Users\u\AppData\Local\vc-client\update");
@@ -421,6 +445,67 @@ mod tests {
             p.new_exe(7),
             Path::new(r"C:\Apps\Voicechat\vc-client.7.new.exe")
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn paths_derive_from_exe_name_unix() {
+        let state = Path::new("/home/u/.local/share/vc-client/update");
+        let p = Paths::new(Path::new("/home/u/apps/vc-client"), state).unwrap();
+        assert_eq!(p.stem, "vc-client");
+        assert_eq!(p.old, Path::new("/home/u/apps/vc-client.old"));
+        assert_eq!(p.bad, Path::new("/home/u/apps/vc-client.bad"));
+        assert_eq!(p.state.parent(), Some(state));
+        assert_eq!(p.lock.parent(), Some(state));
+        let name = p.state.file_name().unwrap().to_str().unwrap();
+        assert!(
+            name.starts_with("vc-client-") && name.ends_with(".update.json"),
+            "{name}"
+        );
+        assert_eq!(
+            p.legacy_state,
+            Path::new("/home/u/apps/vc-client.update.json")
+        );
+        // Linux paths are case-sensitive: another case is another install.
+        let other_case = Paths::new(Path::new("/home/u/Apps/vc-client"), state).unwrap();
+        assert_ne!(other_case.state, p.state);
+        assert_eq!(
+            p.download(7),
+            Path::new("/home/u/apps/vc-client.7.download")
+        );
+        assert_eq!(p.new_exe(7), Path::new("/home/u/apps/vc-client.7.new"));
+    }
+
+    /// A downloaded Linux build that was not renamed keeps its dotted name as the stem,
+    /// so it never shares swap files with another version beside it.
+    #[cfg(unix)]
+    #[test]
+    fn dotted_linux_name_is_its_own_stem() {
+        let state = Path::new("/tmp/state");
+        let p = Paths::new(
+            Path::new("/home/u/Downloads/vc-client-0.1.7-x86_64-linux"),
+            state,
+        )
+        .unwrap();
+        assert_eq!(p.stem, "vc-client-0.1.7-x86_64-linux");
+        assert_eq!(
+            p.old,
+            Path::new("/home/u/Downloads/vc-client-0.1.7-x86_64-linux.old")
+        );
+        let q = Paths::new(
+            Path::new("/home/u/Downloads/vc-client-0.1.8-x86_64-linux"),
+            state,
+        )
+        .unwrap();
+        assert_ne!(p.old, q.old);
+        assert_ne!(p.state, q.state);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn pid_alive_uses_proc() {
+        assert!(pid_alive(std::process::id()));
+        assert!(!pid_alive(4_294_967_290));
     }
 
     #[test]

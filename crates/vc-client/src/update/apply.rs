@@ -3,12 +3,13 @@
 //! Invariant: the exe path is never written until the manifest signature, the exe's
 //! size and SHA-256, and its self-test have all passed.
 
+use std::env::consts::EXE_SUFFIX;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Write};
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-use super::manifest::{self, Decision, MAX_FILE, decide, file_name, url_path, verify};
+use super::manifest::{self, Decision, MAX_FILE, Target, decide, verify};
 use super::selftest::SelfTest;
 use super::state::{self, Loaded, Pending, State, Strikes};
 use super::{Paths, SWAP_GUARD, parse_version};
@@ -117,20 +118,20 @@ pub(crate) fn check_and_stage_with(
     selftest: SelfTestFn,
     rename: &mut dyn FnMut(&Path, &Path) -> io::Result<()>,
 ) -> Outcome {
+    // `enabled()` keeps the updater off where no release ships; never guess a path.
+    let Some(target) = manifest::this_target() else {
+        return Outcome::Skip("no published build for this target");
+    };
     let Some(st) = state::load(&paths.state).usable() else {
         return Outcome::Skip("update state unreadable");
     };
 
     // 1. Signed manifest.
     let mut signed = Vec::new();
-    if let Err(e) = fetch.get(
-        &url_path(channel, "latest.signed"),
-        MAX_FILE as u64,
-        &mut |c| {
-            signed.extend_from_slice(c);
-            Ok(())
-        },
-    ) {
+    if let Err(e) = fetch.get(&target.manifest_path(channel), MAX_FILE as u64, &mut |c| {
+        signed.extend_from_slice(c);
+        Ok(())
+    }) {
         return Outcome::Failed(format!("{e:#}"));
     }
     let m = match verify(&signed, keys, now, channel) {
@@ -151,7 +152,7 @@ pub(crate) fn check_and_stage_with(
     };
 
     // 2. Exe, hashed while streaming, capped at the signed size.
-    if let Err(o) = download(fetch, channel, &m, &dl) {
+    if let Err(o) = download(fetch, target, channel, &m, &dl) {
         cleanup();
         return o;
     }
@@ -264,8 +265,11 @@ pub(crate) fn check_and_stage_with(
 }
 
 /// Stream the exe for `m` into `dest`, checking size and SHA-256, then flush to disk.
+/// On Unix the file is made executable (`0o755`) so the self-test and the next launch
+/// can run it.
 fn download(
     fetch: &dyn Fetch,
+    target: &Target,
     channel: &str,
     m: &manifest::Manifest,
     dest: &Path,
@@ -274,7 +278,7 @@ fn download(
     let mut hash = ring::digest::Context::new(&ring::digest::SHA256);
     let got = fetch
         .get(
-            &url_path(channel, &file_name(&m.version)),
+            &target.url_path(channel, &target.file_name(&m.version)),
             m.size,
             &mut |c| {
                 hash.update(c);
@@ -295,6 +299,12 @@ fn download(
     }
     f.sync_all()
         .map_err(|e| Outcome::Failed(format!("sync download: {e}")))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(dest, fs::Permissions::from_mode(0o755))
+            .map_err(|e| Outcome::Failed(format!("make download executable: {e}")))?;
+    }
     Ok(())
 }
 
@@ -471,7 +481,8 @@ fn roll_back(paths: &Paths) -> bool {
     true
 }
 
-/// Delete this exe's `<stem>.<pid>.download`, `.new.exe` and `.probe` leftovers whose
+/// Delete this exe's `<stem>.<pid>.download`, `.new.exe` (`.new` on Linux) and `.probe`
+/// leftovers whose
 /// process is gone. Files of a live process (including this one) are skipped: std opens
 /// files with `FILE_SHARE_DELETE`, so deleting another instance's in-progress download
 /// would succeed and waste its cycle.
@@ -480,6 +491,7 @@ fn remove_leftovers(paths: &Paths) {
         return;
     };
     let prefix = format!("{}.", paths.stem);
+    let new_suffix = format!(".new{EXE_SUFFIX}");
     for e in rd.flatten() {
         let name = e.file_name();
         let Some(name) = name.to_str() else { continue };
@@ -488,7 +500,7 @@ fn remove_leftovers(paths: &Paths) {
         };
         let mid = rest
             .strip_suffix(".download")
-            .or_else(|| rest.strip_suffix(".new.exe"))
+            .or_else(|| rest.strip_suffix(new_suffix.as_str()))
             .or_else(|| rest.strip_suffix(".probe"));
         let Some(pid) = mid
             .filter(|m| !m.is_empty() && m.bytes().all(|b| b.is_ascii_digit()))
@@ -522,7 +534,7 @@ pub fn confirm_healthy(paths: &Paths, running: &str, max: Duration) -> bool {
 
 /// Start the detached `vc-update` thread. It never blocks shutdown: only the swap
 /// itself is guarded (see [`SWAP_GUARD`]).
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "linux"))]
 pub fn spawn_background(paths: Paths) {
     let Some(channel) = super::CHANNEL else {
         return;
@@ -535,11 +547,22 @@ pub fn spawn_background(paths: Paths) {
     }
 }
 
+/// The HTTPS client for the update host: WinHTTP on Windows, curl on Linux.
 #[cfg(windows)]
+fn production_fetch() -> super::http::WinHttp {
+    super::http::WinHttp::production()
+}
+
+#[cfg(target_os = "linux")]
+fn production_fetch() -> super::curl::Curl {
+    super::curl::Curl::production()
+}
+
+#[cfg(any(windows, target_os = "linux"))]
 fn run_loop(paths: Paths, channel: &'static str) {
     use super::{RUNNING, Status, set_status};
     let keys = super::keys();
-    let fetch = super::http::WinHttp::production();
+    let fetch = production_fetch();
     // First check 5–7 s after start.
     wait(Duration::from_secs(5 + random_below(3)));
     loop {
@@ -584,7 +607,7 @@ fn run_loop(paths: Paths, channel: &'static str) {
 }
 
 /// Sleep for `d`, or until [`super::request_check_now`].
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "linux"))]
 fn wait(d: Duration) {
     let (flag, cv) = &super::WAKE;
     let deadline = Instant::now() + d;
@@ -605,7 +628,7 @@ fn wait(d: Duration) {
     }
 }
 
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "linux"))]
 fn random_below(n: u64) -> u64 {
     let mut b = [0u8; 8];
     let _ = ring::rand::SecureRandom::fill(&ring::rand::SystemRandom::new(), &mut b);
@@ -649,6 +672,15 @@ mod tests {
     }
 
     const NEW: &[u8] = b"NEW EXE BYTES, version 0.2.0";
+    /// The binary name in tests: `vc-client.exe` on Windows, `vc-client` on Linux.
+    fn exe_name() -> String {
+        format!("vc-client{EXE_SUFFIX}")
+    }
+
+    /// The published target the tests run as.
+    fn target() -> &'static Target {
+        manifest::this_target().expect("tests run on a published target")
+    }
     const OLD: &[u8] = b"OLD EXE";
 
     struct Env {
@@ -660,7 +692,7 @@ mod tests {
 
     fn env_with(exe_bytes: &[u8], tweak: impl FnOnce(&mut manifest::Manifest)) -> Env {
         let d = tempfile::tempdir().unwrap();
-        let exe = d.path().join("vc-client.exe");
+        let exe = d.path().join(exe_name());
         fs::write(&exe, OLD).unwrap();
         // Never the real per-user folder in tests.
         let state_dir = d.path().join("appdata");
@@ -673,9 +705,10 @@ mod tests {
         tweak(&mut m);
         let signed = manifest::sign(&kp, &serde_json::to_vec(&m).unwrap());
         let mut files = HashMap::new();
-        files.insert("/stable/latest.signed".to_string(), signed);
+        let t = target();
+        files.insert(t.manifest_path("stable"), signed);
         files.insert(
-            "/stable/vc-client-0.2.0-x86_64.exe".to_string(),
+            t.url_path("stable", &t.file_name("0.2.0")),
             exe_bytes.to_vec(),
         );
         Env {
@@ -712,7 +745,7 @@ mod tests {
             .unwrap()
             .flatten()
             .map(|x| x.file_name().to_string_lossy().into_owned())
-            .filter(|n| n.ends_with(".download") || n.ends_with(".new.exe"))
+            .filter(|n| n.ends_with(".download") || n.ends_with(&format!(".new{EXE_SUFFIX}")))
             .collect()
     }
 
@@ -740,6 +773,52 @@ mod tests {
                 from: "0.1.0".into()
             })
         );
+    }
+
+    /// The paths the fake host serves are exactly the published layout.
+    #[cfg(windows)]
+    #[test]
+    fn windows_fetches_the_shipped_paths() {
+        let e = env();
+        assert_eq!(run(&e, &pass), Outcome::Staged("0.2.0".into()));
+        assert_eq!(
+            *e.fetch.log.borrow(),
+            vec![
+                "/stable/latest.signed".to_string(),
+                "/stable/vc-client-0.2.0-x86_64.exe".to_string()
+            ]
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn linux_fetches_the_linux_paths() {
+        let e = env();
+        assert_eq!(run(&e, &pass), Outcome::Staged("0.2.0".into()));
+        assert_eq!(
+            *e.fetch.log.borrow(),
+            vec![
+                "/stable/linux/latest.signed".to_string(),
+                "/stable/linux/vc-client-0.2.0-x86_64-linux".to_string()
+            ]
+        );
+    }
+
+    /// The staged binary is executable before its self-test runs, and stays so after
+    /// the swap.
+    #[cfg(unix)]
+    #[test]
+    fn staged_file_is_executable() {
+        use std::os::unix::fs::PermissionsExt;
+        let e = env();
+        let exec = |p: &Path, _: &str, _: &str| -> SelfTest {
+            let mode = fs::metadata(p).unwrap().permissions().mode();
+            assert_eq!(mode & 0o111, 0o111, "staged file mode {mode:o}");
+            SelfTest::Pass
+        };
+        assert_eq!(run(&e, &exec), Outcome::Staged("0.2.0".into()));
+        let mode = fs::metadata(&e.paths.exe).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o755);
     }
 
     #[test]
@@ -1142,7 +1221,7 @@ mod tests {
         assert_eq!(startup(&e.paths, "0.1.0"), StartupOutcome::Ok);
         assert!(mine.exists(), "a live process's download must survive");
         assert!(!dead.exists());
-        #[cfg(windows)]
+        #[cfg(any(windows, target_os = "linux"))]
         {
             assert!(crate::update::pid_alive(std::process::id()));
             assert!(!crate::update::pid_alive(4_294_967_290));
@@ -1167,22 +1246,25 @@ mod tests {
     fn startup_removes_only_numbered_leftovers() {
         let e = env();
         let dir = &e.paths.dir;
+        let staged_new = format!("vc-client.4294967292.new{EXE_SUFFIX}");
+        let bare_new = format!("vc-client.new{EXE_SUFFIX}");
         for n in [
-            // Pids that cannot exist (Windows pids are multiples of 4 below 2^32 - 8).
+            // Pids that cannot exist (Windows pids are multiples of 4 below 2^32 - 8;
+            // Linux pids stay below 2^22).
             "vc-client.4294967288.download",
-            "vc-client.4294967292.new.exe",
+            staged_new.as_str(),
             "vc-client.x.download",
             "other.1.download",
-            "vc-client.new.exe",
+            bare_new.as_str(),
         ] {
             fs::write(dir.join(n), b"x").unwrap();
         }
         assert_eq!(startup(&e.paths, "0.1.0"), StartupOutcome::Ok);
         assert!(!dir.join("vc-client.4294967288.download").exists());
-        assert!(!dir.join("vc-client.4294967292.new.exe").exists());
+        assert!(!dir.join(&staged_new).exists());
         assert!(dir.join("vc-client.x.download").exists());
         assert!(dir.join("other.1.download").exists());
-        assert!(dir.join("vc-client.new.exe").exists());
+        assert!(dir.join(&bare_new).exists());
         assert_eq!(fs::read(&e.paths.exe).unwrap(), OLD);
     }
 
@@ -1190,7 +1272,7 @@ mod tests {
     fn unwritable_folder_turns_updater_off() {
         let d = tempfile::tempdir().unwrap();
         let p = Paths::new(
-            &d.path().join("missing-dir").join("vc-client.exe"),
+            &d.path().join("missing-dir").join(exe_name()),
             &d.path().join("appdata"),
         )
         .unwrap();
@@ -1212,7 +1294,10 @@ mod tests {
             .map(|x| x.file_name().to_string_lossy().into_owned())
             .collect();
         beside.sort();
-        assert_eq!(beside, vec!["vc-client.exe", "vc-client.old.exe"]);
+        assert_eq!(
+            beside,
+            vec![exe_name(), format!("vc-client.old{EXE_SUFFIX}")]
+        );
         assert!(e.paths.state.exists() && e.paths.lock.exists());
     }
 

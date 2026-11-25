@@ -194,7 +194,10 @@ pub fn shortcut_cmd(
     }
     let ctrl = mods.command && !mods.alt;
     match key {
-        Key::S if ctrl && mods.shift => Some(UiCommand::ToggleScreenShare),
+        // No capture backend (Linux): the hotkey does nothing.
+        Key::S if ctrl && mods.shift && crate::capture::SUPPORTED => {
+            Some(UiCommand::ToggleScreenShare)
+        }
         Key::M if ctrl && !mods.shift => Some(UiCommand::ToggleMute),
         Key::D if ctrl && !mods.shift => Some(UiCommand::ToggleDeafen),
         Key::F2 if !mods.any() && !typing => rename.map(UiCommand::OpenRenameChannel),
@@ -726,7 +729,7 @@ mod tests {
         );
         assert_eq!(
             shortcut_cmd(Key::S, ctrl | Modifiers::SHIFT, false, "Space", ch),
-            Some(UiCommand::ToggleScreenShare)
+            crate::capture::SUPPORTED.then_some(UiCommand::ToggleScreenShare)
         );
         assert_eq!(shortcut_cmd(Key::S, ctrl, false, "Space", ch), None);
         assert_eq!(

@@ -70,6 +70,11 @@ windows = { version = "0.62", features = [
 # `#[implement]` (the loopback completion handler) expands to `windows_core::` paths.
 windows-core = "0.62"
 
+# Linux windowing backends for the desktop window. Optional, so a build without
+# `desktop` (`--no-default-features`) still pulls in no GUI at all.
+[target.'cfg(target_os = "linux")'.dependencies]
+eframe = { workspace = true, optional = true, features = ["x11", "wayland"] }
+
 # Embeds assets/icon.ico in the exe (Explorer, taskbar pins, shortcuts). See build.rs.
 [target.'cfg(windows)'.build-dependencies]
 winresource = "0.1.34"

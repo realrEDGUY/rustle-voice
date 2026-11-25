@@ -102,6 +102,10 @@ pub fn bgra_to_rgba(px: &mut [u8]) {
     }
 }
 
+/// Whether this build can send its screen. Only Windows has a capture backend
+/// (GDI); elsewhere sharing is hidden in the UI and the client only watches.
+pub const SUPPORTED: bool = cfg!(windows);
+
 /// The primary monitor, captured with GDI.
 #[derive(Debug, Default)]
 pub struct GdiScreen;
