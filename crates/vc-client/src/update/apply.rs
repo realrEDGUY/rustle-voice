@@ -504,18 +504,20 @@ fn remove_leftovers(paths: &Paths) {
 }
 
 /// The running version has stayed up: clear its pending marker. Waits at most `max`
-/// for the update lock.
-pub fn confirm_healthy(paths: &Paths, running: &str, max: Duration) {
+/// for the update lock. Returns true when it cleared the marker: update checks were
+/// skipped while it was set, so the caller should ask for one now.
+pub fn confirm_healthy(paths: &Paths, running: &str, max: Duration) -> bool {
     let Ok(_l) = lock_within(paths, max) else {
-        return;
+        return false;
     };
     let Some(mut s) = state::load(&paths.state).usable() else {
-        return;
+        return false;
     };
     if s.pending.as_ref().is_some_and(|p| p.version == running) {
         s.pending = None;
-        let _ = state::save(&paths.state, &s);
+        return state::save(&paths.state, &s).is_ok();
     }
+    false
 }
 
 /// Start the detached `vc-update` thread. It never blocks shutdown: only the swap
@@ -953,8 +955,19 @@ mod tests {
     fn healthy_confirm_then_next_launch_deletes_old() {
         let e = staged();
         assert_eq!(startup(&e.paths, "0.2.0"), StartupOutcome::Ok);
-        confirm_healthy(&e.paths, "0.2.0", LOCK_WAIT);
+        assert!(
+            !confirm_healthy(&e.paths, "0.1.0", LOCK_WAIT),
+            "another version's confirm clears nothing"
+        );
+        assert!(
+            confirm_healthy(&e.paths, "0.2.0", LOCK_WAIT),
+            "clearing the marker asks for a check"
+        );
         assert_eq!(state::load(&e.paths.state).usable().unwrap().pending, None);
+        assert!(
+            !confirm_healthy(&e.paths, "0.2.0", LOCK_WAIT),
+            "nothing left to clear"
+        );
         assert!(e.paths.old.exists(), "confirm itself deletes nothing");
         assert_eq!(startup(&e.paths, "0.2.0"), StartupOutcome::Ok);
         assert!(!e.paths.old.exists());

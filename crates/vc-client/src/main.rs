@@ -87,13 +87,17 @@ fn main() -> eframe::Result<()> {
     if let Some(paths) = &update_paths {
         #[cfg(windows)]
         update::apply::spawn_background(paths.clone());
-        // Healthy after 30 s of uptime: clear the rollback counter.
+        // Healthy after 30 s of uptime: clear the rollback counter. Checks are skipped
+        // until then on the first launch after an update, so check again right away.
         let p = paths.clone();
         let _ = std::thread::Builder::new()
             .name("vc-update-health".into())
             .spawn(move || {
                 std::thread::sleep(std::time::Duration::from_secs(30));
-                update::apply::confirm_healthy(&p, update::RUNNING, update::apply::LOCK_WAIT);
+                if update::apply::confirm_healthy(&p, update::RUNNING, update::apply::LOCK_WAIT)
+                {
+                    update::request_check_now();
+                }
             });
     }
 
