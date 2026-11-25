@@ -3807,7 +3807,7 @@ checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
 
 [[package]]
 name = "vc-client"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "anyhow",
  "bytes",
@@ -3841,7 +3841,7 @@ dependencies = [
 
 [[package]]
 name = "vc-mobile"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "egui",
  "egui_kittest",
@@ -3858,7 +3858,7 @@ dependencies = [
 
 [[package]]
 name = "vc-proto"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "serde",
  "serde_json",
@@ -3867,7 +3867,7 @@ dependencies = [
 
 [[package]]
 name = "vc-release"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "anyhow",
  "clap",
@@ -3879,7 +3879,7 @@ dependencies = [
 
 [[package]]
 name = "vc-server"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "anyhow",
  "bytes",

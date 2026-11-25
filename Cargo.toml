@@ -6,7 +6,7 @@ members = ["crates/vc-proto", "crates/vc-server", "crates/vc-client", "crates/vc
 repository = "https://github.com/realrEDGUY/rustle-voice"
 edition = "2024"
 rust-version = "1.95"
-version = "0.1.6"
+version = "0.1.7"
 license = "GPL-3.0-or-later"
 
 [workspace.dependencies]
