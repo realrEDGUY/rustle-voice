@@ -177,7 +177,7 @@ h1{font-size:2.25rem;line-height:1.1;margin:0 0 .5rem;letter-spacing:-.02em}
 .btn svg{width:1.15rem;height:1.15rem}
 .meta{color:var(--muted);font-size:.92rem;margin:.9rem 0 0}
 h2{font-size:1rem;margin:2.2rem 0 .6rem}
-ol{margin:0;padding-left:1.25rem}
+ol,ul{margin:0;padding-left:1.25rem}
 li{margin:.3rem 0}
 code{background:var(--code);border-radius:5px;padding:.1rem .35rem;font-size:.88em;font-family:ui-monospace,Consolas,monospace}
 .sha{word-break:break-all;display:block;padding:.6rem .7rem;margin-top:.4rem}
@@ -196,6 +196,11 @@ Download for Windows</a>{{IOS}}
 </div>
 <p class="meta">Version {{VERSION}} &middot; {{SIZE}} MB &middot; Windows 10/11, 64-bit</p>
 </div>
+<h2>Coming soon</h2>
+<ul>
+<li><strong>Client</strong> for macOS and Linux.</li>
+<li><strong>Server</strong> for macOS and Linux.</li>
+</ul>
 <h2>Install</h2>
 <ol>
 <li>Make a folder you own, for example <code>%LOCALAPPDATA%\Programs\Voicechat</code>.</li>
@@ -495,6 +500,7 @@ mod tests {
         assert!(
             html.contains("Version 0.2.0")
                 && html.contains("href=\"stable/vc-client-0.2.0-x86_64.exe\"")
+                && html.contains("<strong>Server</strong> for macOS and Linux")
                 && !html.contains("{{"),
             "{html}"
         );
