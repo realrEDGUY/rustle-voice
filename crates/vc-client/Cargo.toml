@@ -1,0 +1,81 @@
+[package]
+name = "vc-client"
+description = "Rust voicechat GUI client"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "vc-client"
+path = "src/main.rs"
+required-features = ["desktop"]
+
+# A scripted peer (sharer, talker, chatter) for testing other clients by hand,
+# such as the iOS app. See the README's "iOS client" section.
+[[example]]
+name = "fake_peer"
+required-features = ["desktop"]
+
+[features]
+default = ["desktop"]
+# The eframe window (the desktop binary). The iOS core (vc-mobile) builds without it
+# and drives the headless `VoiceApp` itself.
+desktop = ["dep:eframe"]
+
+[dependencies]
+vc-proto.workspace = true
+quinn.workspace = true
+rustls.workspace = true
+ring.workspace = true
+tokio.workspace = true
+bytes.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+clap.workspace = true
+dirs.workspace = true
+eframe = { workspace = true, optional = true }
+egui.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+image.workspace = true
+fast_image_resize.workspace = true
+
+# iOS audio comes from AVAudioEngine in the Swift app (`audio::ExternalBackend`).
+[target.'cfg(not(target_os = "ios"))'.dependencies]
+cpal.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys.workspace = true
+# Same version cpal already pulls in (one copy in the build): Media Foundation
+# hardware H.264 and WASAPI process loopback for stream sound.
+windows = { version = "0.62", features = [
+    "Win32_Foundation",
+    "Win32_System_Com",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_Variant",
+    "Win32_System_Threading",
+    "Win32_Media_MediaFoundation",
+    "Win32_Media_Audio",
+    "Win32_Media_KernelStreaming",
+    # Updater HTTPS client: OS root store and system proxy, no new crates.
+    "Win32_Networking_WinHttp",
+] }
+# `#[implement]` (the loopback completion handler) expands to `windows_core::` paths.
+windows-core = "0.62"
+
+# Embeds assets/icon.ico in the exe (Explorer, taskbar pins, shortcuts). See build.rs.
+[target.'cfg(windows)'.build-dependencies]
+winresource = "0.1.34"
+
+[dev-dependencies]
+egui_kittest.workspace = true
+tempfile.workspace = true
+vc-server.workspace = true
+rcgen.workspace = true

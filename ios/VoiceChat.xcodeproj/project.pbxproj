@@ -1,0 +1,458 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		AC0000000000000000000301 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AC0000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AC0000000000000000000101;
+			remoteInfo = VoiceChat;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		AC0000000000000000000021 /* VoiceChat.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VoiceChat.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AC0000000000000000000022 /* VoiceChatTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VoiceChatTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AC0000000000000000000023 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AC0000000000000000000024 /* build-rust.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "build-rust.sh"; sourceTree = "<group>"; };
+		AC0000000000000000000025 /* VoiceChat-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "VoiceChat-Bridging-Header.h"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		AC0000000000000000000031 /* VoiceChat */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = VoiceChat;
+			sourceTree = "<group>";
+		};
+		AC0000000000000000000032 /* VoiceChatTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = VoiceChatTests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AC0000000000000000000203 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AC0000000000000000000213 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AC0000000000000000000011 = {
+			isa = PBXGroup;
+			children = (
+				AC0000000000000000000031 /* VoiceChat */,
+				AC0000000000000000000032 /* VoiceChatTests */,
+				AC0000000000000000000013 /* Bridge */,
+				AC0000000000000000000023 /* Info.plist */,
+				AC0000000000000000000024 /* build-rust.sh */,
+				AC0000000000000000000012 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AC0000000000000000000012 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AC0000000000000000000021 /* VoiceChat.app */,
+				AC0000000000000000000022 /* VoiceChatTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AC0000000000000000000013 /* Bridge */ = {
+			isa = PBXGroup;
+			children = (
+				AC0000000000000000000025 /* VoiceChat-Bridging-Header.h */,
+			);
+			path = Bridge;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AC0000000000000000000101 /* VoiceChat */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AC0000000000000000000411 /* Build configuration list for PBXNativeTarget "VoiceChat" */;
+			buildPhases = (
+				AC0000000000000000000201 /* Build Rust core */,
+				AC0000000000000000000202 /* Sources */,
+				AC0000000000000000000203 /* Frameworks */,
+				AC0000000000000000000204 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				AC0000000000000000000031 /* VoiceChat */,
+			);
+			name = VoiceChat;
+			productName = VoiceChat;
+			productReference = AC0000000000000000000021 /* VoiceChat.app */;
+			productType = "com.apple.product-type.application";
+		};
+		AC0000000000000000000102 /* VoiceChatTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AC0000000000000000000421 /* Build configuration list for PBXNativeTarget "VoiceChatTests" */;
+			buildPhases = (
+				AC0000000000000000000212 /* Sources */,
+				AC0000000000000000000213 /* Frameworks */,
+				AC0000000000000000000214 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AC0000000000000000000302 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				AC0000000000000000000032 /* VoiceChatTests */,
+			);
+			name = VoiceChatTests;
+			productName = VoiceChatTests;
+			productReference = AC0000000000000000000022 /* VoiceChatTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AC0000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					AC0000000000000000000101 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+					AC0000000000000000000102 = {
+						CreatedOnToolsVersion = 26.0;
+						TestTargetID = AC0000000000000000000101;
+					};
+				};
+			};
+			buildConfigurationList = AC0000000000000000000401 /* Build configuration list for PBXProject "VoiceChat" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = AC0000000000000000000011;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = AC0000000000000000000012 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AC0000000000000000000101 /* VoiceChat */,
+				AC0000000000000000000102 /* VoiceChatTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AC0000000000000000000204 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AC0000000000000000000214 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		AC0000000000000000000201 /* Build Rust core */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Build Rust core";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(PROJECT_DIR)/../target/$(VC_RUST_TRIPLE)/$(VC_RUST_PROFILE)/libvc_mobile.a",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "\"$PROJECT_DIR/build-rust.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AC0000000000000000000202 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AC0000000000000000000212 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AC0000000000000000000302 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AC0000000000000000000101 /* VoiceChat */;
+			targetProxy = AC0000000000000000000301 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		AC0000000000000000000402 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 5.0;
+				VC_RUST_PROFILE = debug;
+				"VC_RUST_TRIPLE[sdk=iphoneos*]" = "aarch64-apple-ios";
+				"VC_RUST_TRIPLE[sdk=iphonesimulator*]" = "aarch64-apple-ios-sim";
+			};
+			name = Debug;
+		};
+		AC0000000000000000000403 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 5.0;
+				VALIDATE_PRODUCT = YES;
+				VC_RUST_PROFILE = release;
+				"VC_RUST_TRIPLE[sdk=iphoneos*]" = "aarch64-apple-ios";
+				"VC_RUST_TRIPLE[sdk=iphonesimulator*]" = "aarch64-apple-ios-sim";
+			};
+			name = Release;
+		};
+		AC0000000000000000000412 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=iphonesimulator*]" = "-";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 25PK93UTQ9;
+				ENABLE_PREVIEWS = YES;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/../crates/vc-mobile/include";
+				INFOPLIST_FILE = Info.plist;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				INFOPLIST_KEY_CFBundleDisplayName = "Rustle Voice";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../target/$(VC_RUST_TRIPLE)/$(VC_RUST_PROFILE)";
+				MARKETING_VERSION = 0.1.4;
+				OTHER_LDFLAGS = (
+					"-lvc_mobile",
+					"-liconv",
+					"-lc",
+					"-lm",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "xyz.rc-wreding.rustlevoice";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "Bridge/VoiceChat-Bridging-Header.h";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AC0000000000000000000413 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=iphonesimulator*]" = "-";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 25PK93UTQ9;
+				ENABLE_PREVIEWS = YES;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/../crates/vc-mobile/include";
+				INFOPLIST_FILE = Info.plist;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				INFOPLIST_KEY_CFBundleDisplayName = "Rustle Voice";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UIUserInterfaceStyle = Dark;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../target/$(VC_RUST_TRIPLE)/$(VC_RUST_PROFILE)";
+				MARKETING_VERSION = 0.1.4;
+				OTHER_LDFLAGS = (
+					"-lvc_mobile",
+					"-liconv",
+					"-lc",
+					"-lm",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "xyz.rc-wreding.rustlevoice";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "Bridge/VoiceChat-Bridging-Header.h";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		AC0000000000000000000422 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=iphonesimulator*]" = "-";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 25PK93UTQ9;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/../crates/vc-mobile/include";
+				MARKETING_VERSION = 0.1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = "xyz.rc-wreding.rustlevoice.tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OBJC_BRIDGING_HEADER = "Bridge/VoiceChat-Bridging-Header.h";
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/VoiceChat.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/VoiceChat";
+			};
+			name = Debug;
+		};
+		AC0000000000000000000423 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=iphonesimulator*]" = "-";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 25PK93UTQ9;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/../crates/vc-mobile/include";
+				MARKETING_VERSION = 0.1.4;
+				PRODUCT_BUNDLE_IDENTIFIER = "xyz.rc-wreding.rustlevoice.tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OBJC_BRIDGING_HEADER = "Bridge/VoiceChat-Bridging-Header.h";
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/VoiceChat.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/VoiceChat";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AC0000000000000000000401 /* Build configuration list for PBXProject "VoiceChat" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AC0000000000000000000402 /* Debug */,
+				AC0000000000000000000403 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AC0000000000000000000411 /* Build configuration list for PBXNativeTarget "VoiceChat" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AC0000000000000000000412 /* Debug */,
+				AC0000000000000000000413 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AC0000000000000000000421 /* Build configuration list for PBXNativeTarget "VoiceChatTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AC0000000000000000000422 /* Debug */,
+				AC0000000000000000000423 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = AC0000000000000000000001 /* Project object */;
+}

@@ -1,0 +1,155 @@
+{
+  "selected": 1,
+  "default_nick": "user",
+  "settings": {
+    "input_mode": "Ptt",
+    "vad_threshold_db": -45.0,
+    "master_volume": 1.0,
+    "nickname": ""
+  },
+  "audio_warning": "No audio device: running without audio (test)",
+  "toasts": [
+    "Error: Wrong server password"
+  ],
+  "tofu": {
+    "key": 2,
+    "label": "Locked",
+    "fingerprint": "abababababababababababababababababababababababababababababababab"
+  },
+  "voice": {
+    "talk_target": 1,
+    "muted": false,
+    "deafened": false,
+    "server_label": "Relay",
+    "channel_name": "Lobby"
+  },
+  "servers": [
+    {
+      "key": 1,
+      "label": "Relay",
+      "addr": "127.0.0.1:7878",
+      "nick": "ios",
+      "password": "",
+      "status": {
+        "kind": "connected",
+        "label": "Connected"
+      },
+      "server_name": "Relay server",
+      "motd": "Be nice",
+      "voice_preset": "balanced",
+      "my_id": 1,
+      "my_channel": 1,
+      "default_channel": 1,
+      "channels": [
+        {
+          "id": 1,
+          "name": "Lobby",
+          "permanent": true,
+          "users": [
+            {
+              "id": 1,
+              "nick": "ios",
+              "me": true,
+              "muted": false,
+              "deafened": false,
+              "sharing": false,
+              "volume": 1.0,
+              "muted_for_me": false,
+              "watching": false,
+              "stream_muted": false
+            },
+            {
+              "id": 2,
+              "nick": "bob",
+              "me": false,
+              "muted": false,
+              "deafened": false,
+              "sharing": true,
+              "volume": 1.5,
+              "muted_for_me": false,
+              "watching": true,
+              "stream_muted": true
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "name": "Gaming",
+          "permanent": false,
+          "users": [
+            {
+              "id": 3,
+              "nick": "carol",
+              "me": false,
+              "muted": true,
+              "deafened": false,
+              "sharing": false,
+              "volume": 1.0,
+              "muted_for_me": true,
+              "watching": false,
+              "stream_muted": false
+            }
+          ]
+        }
+      ],
+      "chat": [
+        {
+          "from": "bob",
+          "text": "hi",
+          "ts_ms": 1700000000000,
+          "image": null
+        },
+        {
+          "from": "bob",
+          "text": "",
+          "ts_ms": 1700000001000,
+          "image": {
+            "id": 1,
+            "w": 640,
+            "h": 480,
+            "available": true
+          }
+        },
+        {
+          "from": "bob",
+          "text": "",
+          "ts_ms": 1700000002000,
+          "image": {
+            "id": 2,
+            "w": 32,
+            "h": 32,
+            "available": false
+          }
+        }
+      ]
+    },
+    {
+      "key": 2,
+      "label": "Locked",
+      "addr": "127.0.0.1:7879",
+      "nick": "ios",
+      "password": "secret",
+      "status": {
+        "kind": "failed",
+        "label": "Error: Wrong server password"
+      },
+      "server_name": "",
+      "motd": "",
+      "voice_preset": "balanced",
+      "my_id": null,
+      "my_channel": null,
+      "default_channel": null,
+      "channels": [],
+      "chat": []
+    }
+  ],
+  "streams": [
+    {
+      "key": 1,
+      "server": "Relay",
+      "user": 2,
+      "nick": "bob",
+      "sound_muted": true
+    }
+  ]
+}

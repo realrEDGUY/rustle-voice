@@ -1,0 +1,64 @@
+[workspace]
+resolver = "2"
+members = ["crates/vc-proto", "crates/vc-server", "crates/vc-client", "crates/vc-release", "crates/vc-mobile"]
+
+[workspace.package]
+repository = "https://github.com/realrEDGUY/rustle-voice"
+edition = "2024"
+rust-version = "1.95"
+version = "0.1.6"
+license = "GPL-3.0-or-later"
+
+[workspace.dependencies]
+vc-proto = { path = "crates/vc-proto" }
+vc-server = { path = "crates/vc-server" }
+egui = { version = "=0.37.0", features = ["monochrome_emoji_fonts"] }
+eframe = { version = "=0.37.0", default-features = false, features = ["glow", "default_fonts", "accesskit", "clipboard"] }
+egui_kittest = { version = "=0.37.0", features = ["eframe"] }
+quinn = { version = "0.11", default-features = false, features = ["runtime-tokio", "rustls-ring", "log"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "logging"] }
+rcgen = "0.14"
+ring = "0.17"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "sync", "time", "signal"] }
+bytes = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.9"
+clap = { version = "4", features = ["derive"] }
+cpal = "0.18"
+dirs = "6"
+anyhow = "1"
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tempfile = "3"
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg"] }
+# Pure-Rust SIMD resize for screen frames (no C libraries).
+fast_image_resize = "6"
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_UI_WindowsAndMessaging"] }
+
+# Screen-share frames are JPEG-encoded and decoded on the CPU every frame; unoptimised
+# codecs make debug builds far too slow for anything above a few fps. The capture
+# swizzle (BGRA to RGBA) and the unchanged-frame check run in vc-client itself, so it
+# is optimised too (debug info is kept). opt-level 1 left the swizzle at ~280 ms per
+# 1440p frame; 2 brings it to ~6 ms.
+[profile.dev.package.vc-client]
+opt-level = 2
+[profile.dev.package.image]
+opt-level = 3
+[profile.dev.package.fast_image_resize]
+opt-level = 3
+[profile.dev.package.zune-jpeg]
+opt-level = 3
+[profile.dev.package.zune-core]
+opt-level = 3
+[profile.dev.package.png]
+opt-level = 3
+[profile.dev.package.fdeflate]
+opt-level = 3
+[profile.dev.package.miniz_oxide]
+opt-level = 3
+[profile.dev.package.simd-adler32]
+opt-level = 3
+[profile.dev.package.crc32fast]
+opt-level = 3

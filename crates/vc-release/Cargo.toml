@@ -1,0 +1,25 @@
+[package]
+name = "vc-release"
+description = "Builds, signs and publishes vc-client auto-updates"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "vc-release"
+path = "src/main.rs"
+
+[dependencies]
+vc-client = { path = "../vc-client" }
+ring.workspace = true
+serde_json.workspace = true
+clap.workspace = true
+anyhow.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

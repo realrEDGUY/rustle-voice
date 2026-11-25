@@ -1,0 +1,18 @@
+{
+  "transmitting": true,
+  "input_level_db": -23,
+  "servers": [
+    {
+      "key": 1,
+      "ping_ms": 42,
+      "speaking": [
+        2
+      ]
+    },
+    {
+      "key": 2,
+      "ping_ms": null,
+      "speaking": []
+    }
+  ]
+}

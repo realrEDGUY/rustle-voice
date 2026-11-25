@@ -1,0 +1,27 @@
+[package]
+name = "vc-mobile"
+description = "iOS core of the voicechat client: the headless app behind a C bridge"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+path = "src/lib.rs"
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+vc-client = { path = "../vc-client", default-features = false }
+vc-proto.workspace = true
+egui.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[dev-dependencies]
+vc-server.workspace = true
+vc-client = { path = "../vc-client" }
+egui_kittest.workspace = true
+tempfile.workspace = true
+tokio.workspace = true

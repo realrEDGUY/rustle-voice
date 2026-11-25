@@ -1,0 +1,16 @@
+# Auto-update release signing keys (Ed25519 public keys).
+#
+# One 64-character hex public key per line. Blank lines and lines starting with
+# `#` are ignored. Every exe compiles this file in, and an update is installed
+# only if its `latest.signed` manifest is signed by one of these keys.
+#
+# While this file lists no key, the updater is switched off.
+#
+# To create a key, run `cargo run -p vc-release -- keygen --out <path outside the repo>`
+# and paste the public key line it prints here. Create two keys (a primary and an
+# offline backup) and list both. Never put a private key in this repository.
+
+# primary (2026-11-24)
+9fbb42d5e7aebb24a53aba838dc7a35a4e8bb1baf8d64e74bd6e1d735877304a
+# backup (2026-11-24)
+8421a07d3cce8dfa987a2859709f02a360ec1993a182803566cbf278d3672f45
